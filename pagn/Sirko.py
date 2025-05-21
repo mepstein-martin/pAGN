@@ -20,7 +20,7 @@ import matplotlib.colors as mpl_col
 class SirkoAGN:
     def __init__(self, Mbh=1e8*ct.MSun, le=0.5, alpha=0.01, b=0, Mdot=None,
                  eps=0.1, opacity = "combined", X=0.7, debug=False, xtol=1e-10,
-                 rootm="lm"):
+                 rootm="lm", enforce_Q = True):
         """ Class that creates an AGN disc object using the equations from Sirko and Goodman 2003.
 
         Parameters
@@ -50,7 +50,8 @@ class SirkoAGN:
             Tolerance in the root finding method.
         rootm: string, optional (default: 'lm')
             Root finding method to be used for both star and no star formation regimes.
-
+        enforce_Q: bool, optional (default: True)
+            Enforce the Toomre Q parameter to be equal to 1 in the star formation regime.
         """
         # Disk parameters
         self.Mbh = Mbh
@@ -67,6 +68,9 @@ class SirkoAGN:
         self.debug = debug
         self.xtol = xtol
         self.rootm = rootm
+        
+        # Set the Toomre Q parameter to be enforced
+        self.enforce_Q = enforce_Q
 
         Ledd = self.L_Edd()
         if Mdot is None and le is None:
@@ -185,7 +189,7 @@ class SirkoAGN:
                     print("Zero residuals at i =", self.i, " :", sol_check_zeros)
 
                 #Check if still in star formation regime
-                if self.Q[self.i] < 1:
+                if self.enforce_Q and self.Q[self.i] < 1:
                     print("Q<1 at i={:d} (R={:1.2e} Rs)".format(self.i, self.R[self.i] / self.Rs))
                     self.isf = self.i
                     break
@@ -201,7 +205,7 @@ class SirkoAGN:
             print("{:d}/{:d}".format(self.i, N), end="\r")
 
         # Inside out, extending the disc with star formation
-        if self.isf > 0:
+        if self.enforce_Q and self.isf > 0:
             x_guess = np.log10((self.Teff4[self.isf] ** 0.25, self.T[self.isf]))
             print("Beginning star formation at index", self.isf)
             for self.i in range(self.isf, N):
